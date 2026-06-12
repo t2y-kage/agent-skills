@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import os
 import pathlib
@@ -6,7 +7,7 @@ import sys
 try:
     import tweepy
 except ModuleNotFoundError:
-    import subprocess, sys
+    import subprocess
     subprocess.run([sys.executable, "-m", "pip", "install", "--break-system-packages", "tweepy"], check=True)
     import tweepy
 
@@ -15,8 +16,6 @@ missing = [k for k in REQUIRED if not os.environ.get(k)]
 if missing:
     sys.exit(f"missing env vars: {', '.join(missing)}")
 
-if len(sys.argv) < 2 or not sys.argv[1].strip():
-    sys.exit("usage: post.py <text>")
 
 def normalize_body(text: str) -> str:
     # モデルがリテラルで書きがちなエスケープ列を、実際の制御文字へ。
@@ -24,7 +23,20 @@ def normalize_body(text: str) -> str:
     text = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
     return text.strip()
 
-text = normalize_body(sys.argv[1])
+
+parser = argparse.ArgumentParser(description="post a tweet, optionally as a reply (thread)")
+parser.add_argument("text", help="tweet body")
+parser.add_argument("--reply-to", dest="reply_to", default=None,
+                    help="tweet ID to reply to (continues a thread)")
+args = parser.parse_args()
+
+text = normalize_body(args.text)
+if not text:
+    sys.exit("usage: post.py [--reply-to <tweet_id>] <text>")
+
+reply_to = args.reply_to.strip() if args.reply_to else None
+if reply_to and not reply_to.isdigit():
+    sys.exit(f"invalid --reply-to tweet id: {reply_to}")
 
 client = tweepy.Client(
     consumer_key=os.environ["X_API_KEY"],
@@ -34,13 +46,19 @@ client = tweepy.Client(
 )
 
 try:
-    resp = client.create_tweet(text=text)
+    if reply_to:
+        resp = client.create_tweet(text=text, in_reply_to_tweet_id=reply_to)
+    else:
+        resp = client.create_tweet(text=text)
     tid = resp.data["id"]
     url = f"https://x.com/i/status/{tid}"
-    # 投稿ログ（日付つき1行）
+    # 投稿ログ（日付つき1行。返信のときは4列目に reply_to=<id> を付ける）
     logp = pathlib.Path(__file__).resolve().parent.parent / "posted.log"
+    line = f"{datetime.date.today().isoformat()}\t{url}\t{text}"
+    if reply_to:
+        line += f"\treply_to={reply_to}"
     with logp.open("a", encoding="utf-8") as f:
-        f.write(f"{datetime.date.today().isoformat()}\t{url}\t{text}\n")
+        f.write(line + "\n")
     print(f"OK {url}")
 except Exception as e:
     sys.exit(f"post failed: {e}")
