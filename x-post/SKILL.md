@@ -17,8 +17,8 @@ metadata: { "openclaw": { "requires": { "bins": ["python3"], "env": ["X_API_KEY"
 1. まず本日の投稿数を確認する：
    exec で `grep -c "^$(date +%F)" {baseDir}/posted.log 2>/dev/null || echo 0`
    結果が 12 以上なら、何もせず「今回は投稿なし」と返して終了。
-2. 投稿前チェック: message ツールの read アクションで slack から対象チャンネル(REDACTED)の直近メッセージを取得し、現在の話題を把握する。
-   - 入力例: {"action": "read", "channel": "slack", "channelId": "REDACTED", "limit": 15 }
+2. 投稿前チェック: まず exec で `cat {baseDir}/config.local` を実行し、`SLACK_CHANNEL_ID` の値を取得する（このファイルはリポジトリに含まれない運用設定。形式は config.local.example を参照）。ファイルがない・値が取れない場合は投稿せず「config.local が未設定」と報告して終了する。次に message ツールの read アクションで slack から対象チャンネル（取得した SLACK_CHANNEL_ID）の直近メッセージを取得し、現在の話題を把握する。
+   - 入力例: {"action": "read", "channel": "slack", "channelId": "<SLACK_CHANNEL_IDの値>", "limit": 15 }
    - 件数（limit）指定で新しい順に返る。なるべく取得後に各メッセージの ts（Unix秒）が「現在時刻 − 6時間」以降のものだけを文脈として使う形で絞る。
    - 「現在時刻 − 6時間」以降のものがない場合は取得できたメッセージから文脈を絞る
    - slack ツールが使えない、または取得が空で直近文脈が得られない場合は、古い／推測の文脈で投稿せず見送る。
