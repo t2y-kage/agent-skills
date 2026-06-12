@@ -17,7 +17,7 @@ metadata: { "openclaw": { "requires": { "bins": ["python3"], "env": ["X_API_KEY"
 1. まず本日の投稿数を確認する：
    exec で `grep -c "^$(date +%F)" {baseDir}/posted.log 2>/dev/null || echo 0`
    結果が 10 以上なら、何もせず「今回は投稿なし」と返して終了。
-2. 投稿前チェック: message ツールの raed アクションで slack から対象チャンネル(CR0T47U69)の直近メッセージを取得し、現在の話題を把握する。
+2. 投稿前チェック: message ツールの read アクションで slack から対象チャンネル(CR0T47U69)の直近メッセージを取得し、現在の話題を把握する。
    - 入力例: {"action": "read", "channel": "slack", "channelId": "CR0T47U69", "limit": 15 }
    - 件数（limit）指定で新しい順に返る。なるべく取得後に各メッセージの ts（Unix秒）が「現在時刻 − 6時間」以降のものだけを文脈として使う形で絞る。
    - 「現在時刻 − 6時間」以降のものがない場合は取得できたメッセージから文脈を絞る
