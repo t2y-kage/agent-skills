@@ -86,6 +86,11 @@ client = tweepy.Client(
     access_token_secret=os.environ["X_ACCESS_TOKEN_SECRET"],
 )
 
+try:
+    my_id = client.get_me(user_auth=True).data.id
+except Exception as e:
+    sys.exit(f"get_me failed: {e}")
+
 emitted = 0
 seen = set()  # 同じ引用ツイートを複数回出さない
 for own_id in target_ids:
@@ -95,6 +100,7 @@ for own_id in target_ids:
         resp = client.get_quote_tweets(
             id=own_id,
             max_results=max_per,
+            exclude=["retweets"],
             tweet_fields=["created_at", "lang"],
             expansions=["author_id"],
             user_fields=["username", "name"],
@@ -112,6 +118,9 @@ for own_id in target_ids:
         if emitted >= args.limit:
             break
         if str(t.id) in seen:
+            continue
+        # 自分自身による引用（自己引用モードの投稿等）は反応対象にしない
+        if t.author_id == my_id:
             continue
         seen.add(str(t.id))
         u = users.get(t.author_id)
