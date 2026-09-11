@@ -1,3 +1,5 @@
 **/__pycache__/**
+.envrc
+work/
 x-post/config.local
 x-post/reacted.log
